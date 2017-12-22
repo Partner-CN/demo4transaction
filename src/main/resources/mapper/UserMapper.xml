@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.partner.demo.demo4transaction.context.mapper.UserMapper">
+    <update id="createTableIfNotExist">
+        CREATE TABLE IF NOT EXISTS `t_user` (
+          `id` INT(11) NOT NULL AUTO_INCREMENT,
+          `name` VARCHAR(50) NULL,
+          PRIMARY KEY (`id`)
+          )
+    </update>
+
+    <insert id="save" parameterType="cn.partner.demo.demo4transaction.context.entity.UserEntity">
+        insert into t_user (`name`) values (#{name})
+    </insert>
+
+    <select id="findById" useCache="false" flushCache="true" parameterType="int" resultType="cn.partner.demo.demo4transaction.context.entity.UserEntity">
+        select * from t_user where id = #{id}
+    </select>
+
+    <update id="update">
+        update t_user set `name`=#{name} where id = #{id}
+    </update>
+</mapper>
