@@ -4,9 +4,13 @@ import cn.partner.demo.demo4transaction.context.entity.UserEntity;
 import cn.partner.demo.demo4transaction.context.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.annotation.PostConstruct;
 import java.util.Random;
@@ -20,6 +24,8 @@ public class UserService {
     private @Autowired UserMapper userMapper;
     private @Autowired UserService self;
 
+    private @Autowired PlatformTransactionManager transactionManager;
+
     @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRES_NEW)
     public String process() {
         UserEntity userEntity = userMapper.findById(1);
@@ -30,15 +36,14 @@ public class UserService {
 
         //
         p("1.主线程sleep 5s");
-        sleep(5000);
-
+        sleep(5 * 1000);
 
         //
         p("1.主线程醒");
         UserEntity userEntity1 = userMapper.findById(1);
         p("1.主线程查询结果b: " + userEntity1.getName());
         p("1.主线程sleep 20s");
-        sleep(20000);
+        sleep(20 * 1000);
 
         //
         p("1.主线程醒");
@@ -47,31 +52,39 @@ public class UserService {
 
         p("1.结束退出抛异常");
 
-        if(userEntity1.getName().equals(userEntity.getName())) {
+        if (userEntity1.getName().equals(userEntity.getName())) {
             return "Error!";
         }
         return "Success!";
     }
 
-    @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRES_NEW)
+//    @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRES_NEW)
     public void update() {
         p("2.进入子线程");
 
-        UserEntity userEntity = userMapper.findById(1);
-        userEntity.setName(random());
-        userMapper.update(userEntity);
+        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
+        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        def.setIsolationLevel(TransactionDefinition.ISOLATION_READ_UNCOMMITTED);
+        TransactionStatus status = transactionManager.getTransaction(def);
 
+        try {
+            UserEntity userEntity = userMapper.findById(1);
+            userEntity.setName(random());
+            userMapper.update(userEntity);
 
-        UserEntity userEntity2 = userMapper.findById(1);
-        p("2.子线程修改后子线程里查询结果: " + userEntity2.getName());
+            UserEntity userEntity2 = userMapper.findById(1);
+            p("2.子线程修改后子线程里查询结果: " + userEntity2.getName());
 
-        p("2.子线程sleep 10s");
-        sleep(10000);
+            p("2.子线程sleep 10s");
+            sleep(10 * 1000);
+
+        } catch (Exception e) {
+            transactionManager.rollback(status);
+        }
+        transactionManager.commit(status);
 
         p("2.子线程结束(commit)");
     }
-
-
 
 
 
