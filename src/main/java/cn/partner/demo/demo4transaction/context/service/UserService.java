@@ -5,12 +5,9 @@ import cn.partner.demo.demo4transaction.context.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.annotation.PostConstruct;
 import java.util.Random;
@@ -58,35 +55,21 @@ public class UserService {
         return "Success!";
     }
 
-//    @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRES_NEW)
+    @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRES_NEW)
     public void update() {
         p("2.进入子线程");
+        UserEntity userEntity = userMapper.findById(1);
+        userEntity.setName(random());
+        userMapper.update(userEntity);
 
-        DefaultTransactionDefinition def = new DefaultTransactionDefinition();
-        def.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        def.setIsolationLevel(TransactionDefinition.ISOLATION_READ_UNCOMMITTED);
-        TransactionStatus status = transactionManager.getTransaction(def);
+        UserEntity userEntity2 = userMapper.findById(1);
+        p("2.子线程修改后子线程里查询结果: " + userEntity2.getName());
 
-        try {
-            UserEntity userEntity = userMapper.findById(1);
-            userEntity.setName(random());
-            userMapper.update(userEntity);
-
-            UserEntity userEntity2 = userMapper.findById(1);
-            p("2.子线程修改后子线程里查询结果: " + userEntity2.getName());
-
-            p("2.子线程sleep 10s");
-            sleep(10 * 1000);
-
-        } catch (Exception e) {
-            transactionManager.rollback(status);
-        }
-        transactionManager.commit(status);
+        p("2.子线程sleep 10s");
+        sleep(10 * 1000);
 
         p("2.子线程结束(commit)");
     }
-
-
 
     void p(Object o) {
         System.out.println(o);
